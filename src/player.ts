@@ -667,9 +667,7 @@ export async function fetchPublicTerritoryHolderProfile(
 ): Promise<PublicTerritoryHolderProfile> {
   const player = await fetchPlayerProfile(usernameOrUuid);
   const activeCharacter =
-    (player.activeCharacter
-      ? player.characters?.[player.activeCharacter] ?? null
-      : null) ?? null;
+    player.activeCharacter ? player.characters?.[player.activeCharacter] ?? null : null;
 
   return {
     username: player.username,
@@ -687,9 +685,7 @@ export async function fetchPublicActiveCharacterProfile(
 ): Promise<PublicActiveCharacterProfile> {
   const player = await fetchPlayerProfile(usernameOrUuid);
   const activeCharacter =
-    (player.activeCharacter
-      ? player.characters?.[player.activeCharacter] ?? null
-      : null) ?? null;
+    player.activeCharacter ? player.characters?.[player.activeCharacter] ?? null : null;
 
   return {
     username: player.username,
