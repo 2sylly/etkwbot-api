@@ -1,4 +1,9 @@
 import { prisma } from "./prisma.js";
+import type {
+  GuildTerritoryBaseGeneration,
+  GuildTerritoryState,
+  TerritoryCurrentStateBlob,
+} from "@prisma/client";
 import {
   fetchGuildRaidTrackingData,
   type GuildRaidSnapshot,
@@ -95,6 +100,15 @@ type TerritoryBaseGenerationRow = {
   fish: number;
   ore: number;
   crop: number;
+};
+
+type GroupedGuildTerritoryRow = {
+  key: string;
+  guildUuid: string;
+  guildName: string;
+  guildPrefix: string;
+  guildPrefixLower: string;
+  territoriesJson: string;
 };
 
 type StoredTerritoryRow = {
@@ -510,7 +524,7 @@ function serializeTerritoryStates(territories: TerritoryState[]): string {
   );
 }
 
-function groupTerritoriesByGuild(territories: TerritoryState[]) {
+function groupTerritoriesByGuild(territories: TerritoryState[]): GroupedGuildTerritoryRow[] {
   const groupedTerritories = new Map<string, TerritoryState[]>();
 
   for (const territory of territories) {
@@ -586,7 +600,7 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
   territories: TerritoryState[],
   territoryTick: Date,
 ): Promise<{ created: number; updated: number; cleared: number } | null> {
-  const existingRows = await prisma.territoryCurrentStateBlob.findMany();
+  const existingRows: TerritoryCurrentStateBlob[] = await prisma.territoryCurrentStateBlob.findMany();
   const latestTakenAt = existingRows.reduce<Date | null>(
     (latest, row) =>
       latest === null || row.takenAt.getTime() > latest.getTime() ? row.takenAt : latest,
@@ -598,7 +612,9 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
   }
 
   const groupedTerritories = groupTerritoriesByGuild(territories);
-  const existingByKey = new Map(existingRows.map((row) => [row.key, row]));
+  const existingByKey = new Map<string, TerritoryCurrentStateBlob>(
+    existingRows.map((row): [string, TerritoryCurrentStateBlob] => [row.key, row]),
+  );
   const newRows = groupedTerritories.filter((group) => !existingByKey.has(group.key));
   const changedRows = groupedTerritories.filter((group) => {
     const existing = existingByKey.get(group.key);
@@ -612,7 +628,7 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
     );
   });
   const staleRows = existingRows.filter(
-    (row) =>
+    (row: TerritoryCurrentStateBlob) =>
       !groupedTerritories.some((group) => group.key === row.key) &&
       row.territoriesJson !== "[]",
   );
@@ -735,18 +751,27 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     });
   }
 
-  const [storedStateTerritories, storedBaseGenerationRows] = await Promise.all([
+  const [storedStateTerritories, storedBaseGenerationRows]: [
+    GuildTerritoryState[],
+    GuildTerritoryBaseGeneration[],
+  ] = await Promise.all([
     prisma.guildTerritoryState.findMany(),
     prisma.guildTerritoryBaseGeneration.findMany(),
   ]);
-  const storedByName = new Map(
-    storedStateTerritories.map((territory) => [territory.territoryName, territory]),
+  const storedByName = new Map<string, GuildTerritoryState>(
+    storedStateTerritories.map((territory: GuildTerritoryState) => [
+      territory.territoryName,
+      territory,
+    ]),
   );
-  const currentByName = new Map(
-    currentTerritories.map((territory) => [territory.territoryName, territory]),
+  const currentByName = new Map<string, TerritoryState>(
+    currentTerritories.map((territory: TerritoryState) => [territory.territoryName, territory]),
   );
-  const storedBaseGenerationByName = new Map(
-    storedBaseGenerationRows.map((row) => [row.territoryName, row] as const),
+  const storedBaseGenerationByName = new Map<string, GuildTerritoryBaseGeneration>(
+    storedBaseGenerationRows.map((row: GuildTerritoryBaseGeneration) => [
+      row.territoryName,
+      row,
+    ]),
   );
 
   const newTerritories = currentTerritories.filter(
@@ -760,7 +785,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     (territory) => !currentByName.has(territory.territoryName),
   );
   const captured = currentTerritories
-    .filter((territory) => {
+    .filter((territory: TerritoryState) => {
       const stored = storedByName.get(territory.territoryName);
       return (
         stored !== undefined &&
@@ -769,7 +794,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
         stored.guildUuid !== territory.guildUuid
       );
     })
-    .map((territory) => {
+    .map((territory: TerritoryState) => {
       const stored = storedByName.get(territory.territoryName);
       return {
         territoryName: territory.territoryName,
@@ -780,7 +805,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
       };
     });
   const lost = storedStateTerritories
-    .filter((territory) => {
+    .filter((territory: GuildTerritoryState) => {
       const current = currentByName.get(territory.territoryName);
       return (
         current !== undefined &&
@@ -789,7 +814,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
         current.guildUuid !== territory.guildUuid
       );
     })
-    .map((territory) => {
+    .map((territory: GuildTerritoryState) => {
       const current = currentByName.get(territory.territoryName);
       return {
         territoryName: territory.territoryName,
@@ -874,7 +899,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     await prisma.guildTerritoryState.deleteMany({
       where: {
         territoryName: {
-          in: deletedTerritories.map((territory) => territory.territoryName),
+          in: deletedTerritories.map((territory: GuildTerritoryState) => territory.territoryName),
         },
       },
     });
