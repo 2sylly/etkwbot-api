@@ -1,0 +1,315 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model GuildRaidMember {
+  uuid         String   @id
+  username     String
+  wars         Int      @default(0)
+  totalRaids   Int      @default(0)
+  notgRaids    Int      @default(0)
+  nolRaids     Int      @default(0)
+  tccRaids     Int      @default(0)
+  tnaRaids     Int      @default(0)
+  twpRaids     Int      @default(0)
+  gambitsUsed  Int      @default(0)
+  contributed  BigInt   @default(0)
+  joinedAt     DateTime?
+  lastSeenOnlineAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  snapshots    GuildRaidMemberHourlySnapshot[]
+  tomeSnapshots GuildTomeWeeklySnapshot[]
+
+  @@index([username])
+}
+
+model GuildSettings {
+  guildId             String   @id
+  noUpdatesMsg        Boolean  @default(false)
+  graidWarningChannelId String?
+  lastJoinWarnChannelId String?
+  lastJoinWarnMessageId String?
+  inGuildLbChannelId  String?
+  inGuildLbMessageId  String?
+  applicationChannelId String?
+  applicationPanelMessageId String?
+  ticketRoleId       String?
+  ticketCounter      Int      @default(0)
+  logChannelId        String?
+  roleChannelId       String?
+  raidTrackChannelId  String?
+  guildTomeChannelId  String?
+  lbChannelId         String?
+  lbUpdateChannelId   String?
+  lbMessageId         String?
+  lbRankingState      String?
+  warTrackChannelId   String?
+  wartimeRoleId       String?
+  ownerRoleId         String?
+  chiefRoleId         String?
+  strategistRoleId    String?
+  captainRoleId       String?
+  recruiterRoleId     String?
+  recruitRoleId       String?
+  memberRoleId        String?
+  inactiveRoleId      String?
+  veteranRoleId       String?
+  nonVeteranRoleId    String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model UserReactionPreference {
+  userId           String   @id
+  repliesEnabled   Boolean  @default(true)
+  reactionsEnabled Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model UserTimezonePreference {
+  userId    String   @id
+  timeZone  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GuildTicket {
+  id             Int      @id @default(autoincrement())
+  guildId        String
+  ticketNumber   Int
+  creatorUserId  String
+  channelId      String?  @unique
+  status         String   @default("open")
+  closedByUserId String?
+  closedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([guildId, ticketNumber])
+  @@index([guildId, status])
+  @@index([guildId, creatorUserId])
+}
+
+model PendingTicketApplication {
+  token       String   @id
+  guildId     String
+  userId      String
+  answersJson String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([guildId, userId])
+}
+
+model GuildMemberLink {
+  id                        Int      @id @default(autoincrement())
+  guildId                   String
+  username                  String
+  usernameLower             String
+  memberUuid                String?
+  discordUserId             String
+  ignoreRoleSync            Boolean @default(false)
+  ignoreNicknameSync        Boolean @default(false)
+  noKick                    Boolean @default(false)
+  lastObservedRank          String?
+  lastObservedLastJoinAt    DateTime?
+  leftGuildRoleHandled      Boolean @default(false)
+  lastInactivityWarningJoinAt DateTime?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@unique([guildId, usernameLower])
+  @@unique([guildId, memberUuid])
+  @@unique([guildId, discordUserId])
+  @@index([guildId])
+}
+
+model GuildRaidMemberHourlySnapshot {
+  id           Int      @id @default(autoincrement())
+  snapshotHour DateTime
+  memberUuid   String
+  username     String
+  wars         Int      @default(0)
+  totalRaids   Int
+  notgRaids    Int
+  nolRaids     Int
+  tccRaids     Int
+  tnaRaids     Int
+  twpRaids     Int      @default(0)
+  gambitsUsed  Int      @default(0)
+  contributed  BigInt
+  joinedAt     DateTime?
+  createdAt    DateTime @default(now())
+  member       GuildRaidMember @relation(fields: [memberUuid], references: [uuid], onDelete: Cascade)
+
+  @@unique([snapshotHour, memberUuid])
+  @@index([snapshotHour])
+  @@index([memberUuid])
+}
+
+model GuildTomeWeeklySnapshot {
+  id            Int      @id @default(autoincrement())
+  snapshotAt    DateTime
+  memberUuid    String
+  username      String
+  playtimeHours Float
+  wars          Int      @default(0)
+  totalRaids    Int      @default(0)
+  createdAt     DateTime @default(now())
+  member        GuildRaidMember @relation(fields: [memberUuid], references: [uuid], onDelete: Cascade)
+
+  @@unique([snapshotAt, memberUuid])
+  @@index([snapshotAt])
+  @@index([memberUuid])
+}
+
+model GuildTerritoryState {
+  territoryName    String                         @id
+  guildUuid        String
+  guildName        String
+  guildPrefix      String
+  hqTerritoryName  String?
+  startX           Int?
+  startZ           Int?
+  endX             Int?
+  endZ             Int?
+  isHq             Boolean                        @default(false)
+  treasury         String?
+  defences         String?
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+  resources        GuildTerritoryResourceState[]
+  connections      GuildTerritoryConnectionState[]
+
+  @@index([guildPrefix])
+  @@index([guildName])
+}
+
+model GuildTerritoryBaseGeneration {
+  territoryName String @id
+  emerald       Int    @default(0)
+  wood          Int    @default(0)
+  fish          Int    @default(0)
+  ore           Int    @default(0)
+  crop          Int    @default(0)
+}
+
+model GuildTerritoryResourceState {
+  territoryName String
+  resourceType  String
+  generation    Int      @default(0)
+  stored        Int      @default(0)
+  limit         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  territory     GuildTerritoryState @relation(fields: [territoryName], references: [territoryName], onDelete: Cascade)
+
+  @@id([territoryName, resourceType])
+  @@index([resourceType])
+}
+
+model GuildTerritoryConnectionState {
+  territoryName      String
+  linkedTerritoryName String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  territory          GuildTerritoryState @relation(fields: [territoryName], references: [territoryName], onDelete: Cascade)
+
+  @@id([territoryName, linkedTerritoryName])
+  @@index([linkedTerritoryName])
+}
+
+model GuildTerritoryEcoSnapshot {
+  id         Int                              @id @default(autoincrement())
+  takenAt    DateTime
+  createdAt  DateTime                         @default(now())
+  territories GuildTerritoryEcoSnapshotTerritory[]
+
+  @@index([takenAt])
+}
+
+model GuildTerritoryEcoSnapshotTerritory {
+  id          Int                               @id @default(autoincrement())
+  snapshotId  Int
+  territoryName String
+  guildUuid   String
+  guildName   String
+  guildPrefix String
+  defences    String?
+  treasury    String?
+  isHq        Boolean                           @default(false)
+  snapshot    GuildTerritoryEcoSnapshot        @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  resources   GuildTerritoryEcoSnapshotResource[]
+
+  @@index([snapshotId])
+  @@index([guildPrefix])
+  @@index([territoryName])
+}
+
+model GuildTerritoryEcoSnapshotResource {
+  territorySnapshotId Int
+  resourceType        String
+  generationPerHour   Int      @default(0)
+  stored              Int      @default(0)
+  limit               Int      @default(0)
+  territorySnapshot   GuildTerritoryEcoSnapshotTerritory @relation(fields: [territorySnapshotId], references: [id], onDelete: Cascade)
+
+  @@id([territorySnapshotId, resourceType])
+  @@index([resourceType])
+}
+
+model TerritoryCurrentStateBlob {
+  key              String   @id
+  guildUuid        String
+  guildName        String
+  guildPrefix      String
+  guildPrefixLower String
+  takenAt          DateTime
+  territoriesJson  String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([takenAt])
+  @@index([guildPrefixLower])
+}
+
+model TerritoryEcoSnapshotBlob {
+  id               Int      @id @default(autoincrement())
+  takenAt          DateTime
+  guildUuid        String
+  guildName        String
+  guildPrefix      String
+  guildPrefixLower String
+  territoriesJson  String
+  createdAt        DateTime @default(now())
+
+  @@index([takenAt])
+  @@index([guildPrefixLower, takenAt])
+}
+
+model TerritoryPackageInferenceBlob {
+  id               Int      @id @default(autoincrement())
+  takenAt          DateTime
+  guildUuid        String
+  guildName        String
+  guildPrefix      String
+  guildPrefixLower String
+  inferenceJson    String
+  createdAt        DateTime @default(now())
+
+  @@index([takenAt])
+  @@index([guildPrefixLower, takenAt])
+}

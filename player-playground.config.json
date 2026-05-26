@@ -1,0 +1,132 @@
+{
+  "background": {
+    "input": "public/img/player-background.jpeg",
+    "output": "public/img/player-background-playground.png",
+    "width": 1000,
+    "height": 1500,
+    "fit": "cover",
+    "brightness": 1,
+    "saturation": 1,
+    "blur": 0
+  },
+  "font": {
+    "path": "public/fonts/mojangles.otf",
+    "family": "Mojangles"
+  },
+  "layers": [
+    {
+      "type": "text",
+      "text": "TWP Leaderboard",
+      "x": 100,
+      "y": 150,
+      "fontSize": 60,
+      "fill": "#071018",
+      "align": "left",
+      "explanation": "change uop to whatever was requested; align can be left, center, or right"
+    },
+    {
+      "type": "rect",
+      "x": 100,
+      "y": 225,
+      "width": 800,
+      "height": 5,
+      "fill": "#071018",
+      "opacity": 0.8
+    },
+    {
+      "type": "text",
+      "text": "05/04/2026 12:00 - 05/04/2026 12:00",
+      "x": 940,
+      "y": 60,
+      "fontSize": 20,
+      "align": "right",
+      "fill": "#071018",
+      "explanation": "adapt dates"
+    },
+    {
+      "type": "text",
+      "text": "#10 _Thinking_Face_",
+      "x": 125,
+      "y": 250,
+      "fontSize": 54,
+      "fill": "#071018",
+      "align": "left",
+      "explanation": "change player name obv"
+    },
+    {
+      "type": "text",
+      "text": "+40",
+      "x": 881.82,
+      "y": 250,
+      "fontSize": 54,
+      "fill": "#071018",
+      "align": "right"
+    },
+  { "type": "text", "text": "#11 PLAYER_NAME", "x": 125, "y": 315, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 315, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#12 PLAYER_NAME", "x": 125, "y": 380, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 380, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#13 PLAYER_NAME", "x": 125, "y": 445, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 445, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#14 PLAYER_NAME", "x": 125, "y": 510, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 510, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#15 PLAYER_NAME", "x": 125, "y": 575, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 575, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#16 PLAYER_NAME", "x": 125, "y": 640, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 640, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#17 PLAYER_NAME", "x": 125, "y": 705, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 705, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#18 PLAYER_NAME", "x": 125, "y": 770, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 770, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#19 PLAYER_NAME", "x": 125, "y": 835, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 835, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#20 PLAYER_NAME", "x": 125, "y": 900, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 900, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#21 PLAYER_NAME", "x": 125, "y": 965, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 965, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#22 PLAYER_NAME", "x": 125, "y": 1030, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 1030, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#23 PLAYER_NAME", "x": 125, "y": 1095, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 1095, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#24 PLAYER_NAME", "x": 125, "y": 1160, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 1160, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#25 PLAYER_NAME", "x": 125, "y": 1225, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 1225, "fontSize": 54, "fill": "#071018", "align": "right" },
+
+  { "type": "text", "text": "#26 PLAYER_NAME", "x": 125, "y": 1290, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 1290, "fontSize": 54, "fill": "#071018", "align": "right" },
+   { "type": "text", "text": "#27 PLAYER_NAME", "x": 125, "y": 1355, "fontSize": 54, "fill": "#071018", "align": "left" },
+  { "type": "text", "text": "+SCORE", "x": 881.82, "y": 1355, "fontSize": 54, "fill": "#071018", "align": "right" },
+    {
+      "type": "text",
+      "text": "Page 1/2",
+      "x": 881.82,
+      "y": 1412.5,
+      "fontSize": 30,
+      "fill": "#071018",
+      "align": "right"
+    },
+    {
+      "type": "text",
+      "text": "Generated at 05/13/2026 on request of 2sylly",
+      "x": 40,
+      "y": 1470,
+      "fontSize": 25,
+      "fill": "#071018"
+    }
+  ]
+}
