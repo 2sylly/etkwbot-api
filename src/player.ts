@@ -10,6 +10,7 @@ import {
   fetchWithWynncraftAuthFallback
 } from "./wynncraft.js";
 import { logInfo, logWarning } from "./core/logging.js";
+import { measureCanvasTextWidth, renderCanvasText } from "./canvasText.js";
 import { resolvePreferredFontPathFromUrl } from "./fontPath.js";
 import {
   formatDateForTimeZone,
@@ -745,46 +746,24 @@ function buildShapeOverlaySvg(
   return Buffer.from(svg);
 }
 
-async function applyLayerOpacity(buffer: Buffer, opacity: number | undefined): Promise<Buffer> {
-  if (typeof opacity !== "number" || opacity >= 1) {
-    return buffer;
-  }
-
-  const alpha = Math.max(0, Math.min(255, Math.round(opacity * 255)));
-
-  return sharp(buffer)
-    .composite([
-      {
-        input: Buffer.from([0, 0, 0, alpha]),
-        raw: {
-          width: 1,
-          height: 1,
-          channels: 4
-        },
-        tile: true,
-        blend: "dest-in"
-      }
-    ])
-    .png()
-    .toBuffer();
-}
-
 async function renderTextBuffer(
   text: string,
   layer: PlayerCardTextLayer
-): Promise<Buffer> {
-  const rendered = await sharp({
-    text: {
-      text: `<span foreground="${escapeXml(layer.fill)}">${escapeXml(text)}</span>`,
-      font: `${PLAYER_CARD_FONT_FAMILY} ${layer.fontSize}`,
-      fontfile: PLAYER_CARD_FONT_PATH,
-      rgba: true
-    }
-  })
-    .png()
-    .toBuffer();
-
-  return applyLayerOpacity(rendered, layer.opacity);
+): Promise<{
+  buffer: Buffer;
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+}> {
+  return renderCanvasText({
+    text,
+    fontPath: PLAYER_CARD_FONT_PATH,
+    fontFamily: PLAYER_CARD_FONT_FAMILY,
+    fontSize: layer.fontSize,
+    fill: layer.fill,
+    opacity: layer.opacity
+  });
 }
 
 async function measureTextWidth(text: string, fontSize: number): Promise<number> {
@@ -795,15 +774,12 @@ async function measureTextWidth(text: string, fontSize: number): Promise<number>
     return cached;
   }
 
-  const buffer = await renderTextBuffer(text, {
+  const width = measureCanvasTextWidth(
     text,
-    x: 0,
-    y: 0,
-    fontSize,
-    fill: PLAYER_CARD_TEXT_COLOR
-  });
-  const metadata = await sharp(buffer).metadata();
-  const width = metadata.width ?? 0;
+    PLAYER_CARD_FONT_PATH,
+    PLAYER_CARD_FONT_FAMILY,
+    fontSize
+  );
   textWidthCache.set(cacheKey, width);
   return width;
 }
@@ -840,15 +816,14 @@ async function buildTextComposites(
       continue;
     }
 
-    const buffer = await renderTextBuffer(layer.text, layer);
-    const metadata = await sharp(buffer).metadata();
-    const width = metadata.width ?? 0;
-    const height = metadata.height ?? 0;
+    const rendered = await renderTextBuffer(layer.text, layer);
+    const width = rendered.width;
+    const height = rendered.height;
 
     composites.push({
-      input: buffer,
-      left: getTextLeft(layer, width),
-      top: getTextTop(layer, height)
+      input: rendered.buffer,
+      left: getTextLeft(layer, width) - rendered.offsetX,
+      top: getTextTop(layer, height) - rendered.offsetY
     });
   }
 

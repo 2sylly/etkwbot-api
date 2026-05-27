@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AttachmentBuilder } from "discord.js";
 import sharp from "sharp";
+import { measureCanvasTextWidth, renderCanvasText } from "./canvasText.js";
 import { resolvePreferredFontPath } from "./fontPath.js";
 import {
   formatDateRangeForTimeZone,
@@ -397,50 +398,25 @@ function buildGlintOverlaySvg(
 </svg>`);
 }
 
-async function applyLayerOpacity(
-  buffer: Buffer,
-  opacity: number | undefined,
-): Promise<Buffer> {
-  if (typeof opacity !== "number" || opacity >= 1) {
-    return buffer;
-  }
-
-  const alpha = Math.max(0, Math.min(255, Math.round(opacity * 255)));
-
-  return sharp(buffer)
-    .composite([
-      {
-        input: Buffer.from([0, 0, 0, alpha]),
-        raw: {
-          width: 1,
-          height: 1,
-          channels: 4,
-        },
-        tile: true,
-        blend: "dest-in",
-      },
-    ])
-    .png()
-    .toBuffer();
-}
-
 async function renderTextBuffer(
   text: string,
   layer: TextLayer,
   fill = layer.fill,
-): Promise<Buffer> {
-  const rendered = await sharp({
-    text: {
-      text: `<span foreground="${escapeXml(fill)}">${escapeXml(text)}</span>`,
-      font: `${fontFamily} ${layer.fontSize}`,
-      fontfile: fontPath,
-      rgba: true,
-    },
-  })
-    .png()
-    .toBuffer();
-
-  return applyLayerOpacity(rendered, layer.opacity);
+): Promise<{
+  buffer: Buffer;
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+}> {
+  return renderCanvasText({
+    text,
+    fontPath,
+    fontFamily,
+    fontSize: layer.fontSize,
+    fill,
+    opacity: layer.opacity,
+  });
 }
 
 function getTextLeft(layer: TextLayer, width: number): number {
@@ -472,19 +448,18 @@ async function buildTextOverlay(
     return null;
   }
 
-  const buffer = await renderTextBuffer(layer.text, layer);
-  const metadata = await sharp(buffer).metadata();
-  const width = metadata.width ?? 0;
-  const height = metadata.height ?? 0;
+  const rendered = await renderTextBuffer(layer.text, layer);
+  const width = rendered.width;
+  const height = rendered.height;
 
   if (width <= 0 || height <= 0) {
     return null;
   }
 
   return {
-    input: buffer,
-    left: getTextLeft(layer, width),
-    top: getTextTop(layer, height),
+    input: rendered.buffer,
+    left: getTextLeft(layer, width) - rendered.offsetX,
+    top: getTextTop(layer, height) - rendered.offsetY,
   };
 }
 
@@ -499,15 +474,12 @@ async function measureTextWidth(
     return cached;
   }
 
-  const buffer = await renderTextBuffer(text, {
+  const width = measureCanvasTextWidth(
     text,
-    x: 0,
-    y: 0,
+    fontPath,
+    fontFamily,
     fontSize,
-    fill: textColor,
-  });
-  const metadata = await sharp(buffer).metadata();
-  const width = metadata.width ?? 0;
+  );
   textWidthCache.set(cacheKey, width);
   return width;
 }
