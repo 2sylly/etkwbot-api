@@ -10,6 +10,7 @@ import {
   type SKRSContext2D
 } from "@napi-rs/canvas";
 import sharp from "sharp";
+import { resolvePreferredFontPathFromUrl } from "./fontPath.js";
 
 import type {
   TerritoryResourceType,
@@ -63,7 +64,7 @@ const MAP_LEFT = 110;
 const MAP_TOP = 43;
 const MAP_WIDTH = 1700;
 const MAP_HEIGHT = 2716.8;
-const MAP_FONT_PATH = fileURLToPath(
+const MAP_FONT_PATH = resolvePreferredFontPathFromUrl(
   new URL("../public/fonts/mojangles.otf", import.meta.url)
 );
 const MAP_FONT_BASE64 = readFileSync(MAP_FONT_PATH).toString("base64");

@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import {
   ActionRowBuilder,
   AttachmentBuilder,
@@ -11,6 +10,7 @@ import {
   fetchWithWynncraftAuthFallback
 } from "./wynncraft.js";
 import { logInfo, logWarning } from "./core/logging.js";
+import { resolvePreferredFontPathFromUrl } from "./fontPath.js";
 import {
   formatDateForTimeZone,
   formatDateTimeForTimeZone
@@ -26,7 +26,7 @@ const PLAYER_CARD_TEXT_COLOR = "#071018";
 const PLAYER_CARD_BACKGROUND_BUFFER = readFileSync(
   new URL("../public/img/player-background.jpeg", import.meta.url)
 );
-const PLAYER_CARD_FONT_PATH = fileURLToPath(
+const PLAYER_CARD_FONT_PATH = resolvePreferredFontPathFromUrl(
   new URL("../public/fonts/mojangles.otf", import.meta.url)
 );
 const PLAYER_CARD_FONT_FAMILY = "Mojangles";

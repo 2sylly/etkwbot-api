@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AttachmentBuilder } from "discord.js";
 import sharp from "sharp";
+import { resolvePreferredFontPath } from "./fontPath.js";
 import {
   formatDateRangeForTimeZone,
   formatDateTimeForTimeZone
@@ -89,7 +90,7 @@ const rawConfig = JSON.parse(
   readFileSync(configPath, "utf8"),
 ) as LeaderboardConfig;
 const backgroundPath = resolve(configDirectory, rawConfig.background.input);
-const fontPath = resolve(configDirectory, rawConfig.font.path);
+const fontPath = resolvePreferredFontPath(resolve(configDirectory, rawConfig.font.path));
 const fontFamily = rawConfig.font.family ?? "Mojangles";
 const backgroundBuffer = readFileSync(backgroundPath);
 const cardWidth = rawConfig.background.width ?? 1000;
