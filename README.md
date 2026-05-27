@@ -19,15 +19,12 @@ npx vercel dev
 - `GET /api/health` returns a health check payload.
 - `GET /api/player/summary?username=<ign>` returns player view metadata for Discord menus.
 - `GET /api/territory/names` returns territory names for autocomplete.
-- `POST /api/commands/map` returns `/map` reply content and rendered map file data.
-- `POST /api/commands/territory` returns `/territory` data and rendered focus map file data.
-- `POST /api/commands/leaderboard-image` returns rendered leaderboard image page data.
-- `GET /api/render/player?username=<ign>` returns a player card PNG.
-- `POST /api/render/leaderboard-card` returns a leaderboard card PNG.
-- `POST /api/render/territory-map` returns a territory map JPEG.
-- `POST /api/render/territory-neighborhood-map` returns a focused territory JPEG.
-- `POST /api/sync/guild-raids` runs the guild raid database sync and returns changed rows.
-- `POST /api/sync/territories` runs the territory database sync and returns territory changes.
+- `POST /api/commands` dispatches command operations from the request body:
+  `type: "map" | "territory" | "leaderboard-image"`.
+- `POST /api/render` dispatches render operations from the request body:
+  `type: "player" | "leaderboard-card" | "territory-map" | "territory-neighborhood-map"`.
+- `POST /api/sync` dispatches sync operations from the request body:
+  `type: "guild-raids" | "territories"`.
 
 The sync endpoints require `ETKWYNN_SYNC_API_SECRET` on the API and the same value from the bot via
 `X-ETKWynn-Sync-Secret` or `Authorization: Bearer <secret>`.
