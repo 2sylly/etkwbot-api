@@ -8,6 +8,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/health",
+      "destination": "/api/index?route=health"
+    },
+    {
       "source": "/api",
       "destination": "/api/index"
     }
