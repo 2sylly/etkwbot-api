@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Serverless TypeScript API for ETKWynn on Vercel.",
-  "main": "index.ts",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
