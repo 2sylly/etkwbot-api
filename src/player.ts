@@ -9,12 +9,12 @@ import {
 import sharp from "sharp";
 import {
   fetchWithWynncraftAuthFallback
-} from "./wynncraft.ts";
-import { logInfo, logWarning } from "./core/logging.ts";
+} from "./wynncraft.js";
+import { logInfo, logWarning } from "./core/logging.js";
 import {
   formatDateForTimeZone,
   formatDateTimeForTimeZone
-} from "./features/timezone/runtime.ts";
+} from "./features/timezone/runtime.js";
 
 const WYNNCRAFT_PLAYER_URL = "https://api.wynncraft.com/v3/player";
 const WYNNCRAFT_GUILD_PREFIX_URL = "https://api.wynncraft.com/v3/guild/prefix";

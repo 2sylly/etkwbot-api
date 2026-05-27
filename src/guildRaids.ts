@@ -1,4 +1,4 @@
-import { fetchWithWynncraftAuthFallback } from "./wynncraft.ts";
+import { fetchWithWynncraftAuthFallback } from "./wynncraft.js";
 
 const WYNNCRAFT_GUILD_URL = "https://api.wynncraft.com/v3/guild/prefix/ETKW";
 

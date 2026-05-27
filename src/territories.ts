@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { fetchWithWynncraftAuthFallback } from "./wynncraft.ts";
+import { fetchWithWynncraftAuthFallback } from "./wynncraft.js";
 
 const WYNNCRAFT_TERRITORY_LIST_URL =
   "https://api.wynncraft.com/v3/guild/list/territory";

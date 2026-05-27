@@ -14,7 +14,7 @@ import sharp from "sharp";
 import type {
   TerritoryResourceType,
   TerritoryState
-} from "./territories.ts";
+} from "./territories.js";
 
 export type TerritoryMapSnapshot = {
   source: "live" | "stored";

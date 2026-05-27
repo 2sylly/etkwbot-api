@@ -6,7 +6,7 @@ import sharp from "sharp";
 import {
   formatDateRangeForTimeZone,
   formatDateTimeForTimeZone
-} from "./features/timezone/runtime.ts";
+} from "./features/timezone/runtime.js";
 
 type HorizontalAnchor = "left" | "center" | "right";
 type VerticalAnchor = "top" | "middle" | "bottom";
