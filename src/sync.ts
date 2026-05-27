@@ -14,6 +14,7 @@ import {
   type FetchedTerritoryStateSnapshot,
   type TerritoryState,
 } from "./territories.js";
+import { logInfo } from "./core/logging.js";
 
 const RAID_RECENTLY_ONLINE_GRACE_MS = 10 * 60 * 1000;
 const RAID_SYNC_INTERVAL_MS = 2 * 60 * 1000;
@@ -24,6 +25,7 @@ const SYNC_TRANSACTION_OPTIONS = {
   maxWait: 5_000,
   timeout: 20_000,
 } as const;
+const WRITE_BATCH_SIZE = 24;
 
 const RAID_DELTAS = [
   { key: "notg", label: "NOTG" },
@@ -235,6 +237,16 @@ function formatSignedDelta(value: number): string {
 
 function formatDiscordName(value: string): string {
   return `\`${value.replace(/`/g, "'")}\``;
+}
+
+async function runInBatches<T>(
+  items: readonly T[],
+  batchSize: number,
+  task: (item: T) => Promise<void>,
+): Promise<void> {
+  for (let index = 0; index < items.length; index += batchSize) {
+    await Promise.all(items.slice(index, index + batchSize).map((item) => task(item)));
+  }
 }
 
 function getRaidDeltas(snapshot: GuildRaidSnapshot, storedMember: StoredRaidValues) {
@@ -600,6 +612,7 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
   territories: TerritoryState[],
   territoryTick: Date,
 ): Promise<{ created: number; updated: number; cleared: number } | null> {
+  const startedAt = Date.now();
   const existingRows: TerritoryCurrentStateBlob[] = await prisma.territoryCurrentStateBlob.findMany();
   const latestTakenAt = existingRows.reduce<Date | null>(
     (latest, row) =>
@@ -647,7 +660,7 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
     });
   }
 
-  for (const group of changedRows) {
+  await runInBatches(changedRows, WRITE_BATCH_SIZE, async (group) => {
     await prisma.territoryCurrentStateBlob.update({
       where: {
         key: group.key,
@@ -661,9 +674,9 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
         territoriesJson: group.territoriesJson,
       },
     });
-  }
+  });
 
-  for (const row of staleRows) {
+  await runInBatches(staleRows, WRITE_BATCH_SIZE, async (row) => {
     await prisma.territoryCurrentStateBlob.update({
       where: {
         key: row.key,
@@ -673,7 +686,11 @@ async function syncCurrentTerritoryStateSnapshotsAtTick(
         territoriesJson: "[]",
       },
     });
-  }
+  });
+
+  logInfo(
+    `territory.current-state tick=${territoryTick.toISOString()} created=${newRows.length} updated=${changedRows.length} cleared=${staleRows.length} duration=${Date.now() - startedAt}ms`,
+  );
 
   return {
     created: newRows.length,
@@ -686,6 +703,7 @@ async function saveTerritoryEcoSnapshotAtTick(
   territories: TerritoryState[],
   territoryTick: Date,
 ): Promise<boolean> {
+  const startedAt = Date.now();
   const mostRecentSnapshot = await prisma.territoryEcoSnapshotBlob.findFirst({
     orderBy: {
       takenAt: "desc",
@@ -718,6 +736,10 @@ async function saveTerritoryEcoSnapshotAtTick(
     },
   });
 
+  logInfo(
+    `territory.eco-snapshot tick=${territoryTick.toISOString()} groups=${groupedTerritories.length} duration=${Date.now() - startedAt}ms`,
+  );
+
   return true;
 }
 
@@ -735,8 +757,13 @@ function buildTerritorySyncResult(
 }
 
 export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResult> {
+  const syncStartedAt = Date.now();
   const territorySnapshot = await fetchTerritoryStateSnapshot();
   const currentTerritories = territorySnapshot.territories;
+
+  logInfo(
+    `territory.sync fetch territories=${currentTerritories.length} tick=${territorySnapshot.territoryLastTick?.toISOString() ?? "none"} duration=${Date.now() - syncStartedAt}ms`,
+  );
 
   if (currentTerritories.length === 0) {
     return buildTerritorySyncResult(territorySnapshot, {
@@ -758,6 +785,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     prisma.guildTerritoryState.findMany(),
     prisma.guildTerritoryBaseGeneration.findMany(),
   ]);
+  const diffStartedAt = Date.now();
   const storedByName = new Map<string, GuildTerritoryState>(
     storedStateTerritories.map((territory: GuildTerritoryState) => [
       territory.territoryName,
@@ -834,6 +862,11 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     return stored !== undefined && !baseGenerationRowsMatch(stored, row);
   });
 
+  logInfo(
+    `territory.sync diff new=${newTerritories.length} changed=${changedTerritories.length} deleted=${deletedTerritories.length} baseNew=${newBaseGenerationRows.length} baseChanged=${changedBaseGenerationRows.length} duration=${Date.now() - diffStartedAt}ms`,
+  );
+
+  const writeStartedAt = Date.now();
   if (newTerritories.length > 0) {
     await prisma.guildTerritoryState.createMany({
       data: newTerritories.map((territory) => ({
@@ -853,7 +886,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     });
   }
 
-  for (const territory of changedTerritories) {
+  await runInBatches(changedTerritories, WRITE_BATCH_SIZE, async (territory) => {
     await prisma.guildTerritoryState.update({
       where: {
         territoryName: territory.territoryName,
@@ -872,7 +905,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
         defences: territory.defences,
       },
     });
-  }
+  });
 
   if (newBaseGenerationRows.length > 0) {
     await prisma.guildTerritoryBaseGeneration.createMany({
@@ -880,7 +913,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     });
   }
 
-  for (const row of changedBaseGenerationRows) {
+  await runInBatches(changedBaseGenerationRows, WRITE_BATCH_SIZE, async (row) => {
     await prisma.guildTerritoryBaseGeneration.update({
       where: {
         territoryName: row.territoryName,
@@ -893,7 +926,7 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
         crop: row.crop,
       },
     });
-  }
+  });
 
   if (deletedTerritories.length > 0) {
     await prisma.guildTerritoryState.deleteMany({
@@ -905,13 +938,24 @@ export async function syncTerritoriesFromApiRequest(): Promise<TerritorySyncResu
     });
   }
 
+  logInfo(
+    `territory.sync db-write created=${newTerritories.length} updated=${changedTerritories.length} deleted=${deletedTerritories.length} baseCreated=${newBaseGenerationRows.length} baseUpdated=${changedBaseGenerationRows.length} duration=${Date.now() - writeStartedAt}ms`,
+  );
+
   const territoryTick = territorySnapshot.territoryLastTick;
+  const snapshotStartedAt = Date.now();
   const [stateBlob, ecoSnapshotSaved] = territoryTick
     ? await Promise.all([
         syncCurrentTerritoryStateSnapshotsAtTick(currentTerritories, territoryTick),
         saveTerritoryEcoSnapshotAtTick(currentTerritories, territoryTick),
       ])
     : [null, false] as const;
+
+  logInfo(
+    `territory.sync snapshot-write tick=${territoryTick?.toISOString() ?? "none"} stateBlob=${stateBlob ? `created:${stateBlob.created},updated:${stateBlob.updated},cleared:${stateBlob.cleared}` : "skipped"} ecoSnapshotSaved=${ecoSnapshotSaved} duration=${Date.now() - snapshotStartedAt}ms`,
+  );
+
+  logInfo(`territory.sync total duration=${Date.now() - syncStartedAt}ms`);
 
   return buildTerritorySyncResult(territorySnapshot, {
     created: newTerritories.length,

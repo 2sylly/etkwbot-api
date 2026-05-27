@@ -5,11 +5,11 @@ import {
   requireSharedSecret,
   sendJson,
   withApiLogging,
-} from "../../src/http.js";
+} from "../src/http.js";
 import {
   syncGuildRaidsFromApiRequest,
   syncTerritoriesFromApiRequest,
-} from "../../src/sync.js";
+} from "../src/sync.js";
 
 export const config = {
   maxDuration: 60,

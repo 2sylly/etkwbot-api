@@ -6,8 +6,8 @@ import {
   renderLeaderboardImageCommand,
   renderMapCommand,
   renderTerritoryCommand,
-} from "../../src/commandRenderers.js";
-import { requireMethod, sendJson, withApiLogging } from "../../src/http.js";
+} from "../src/commandRenderers.js";
+import { requireMethod, sendJson, withApiLogging } from "../src/http.js";
 
 export const config = {
   maxDuration: 60,

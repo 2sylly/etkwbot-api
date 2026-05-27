@@ -1,15 +1,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { renderLeaderboardCard } from "../../src/leaderboardCard.js";
-import { buildPlayerReply, fetchPlayerProfile } from "../../src/player.js";
-import { getAttachmentBuffer, sendImage } from "../../src/renderResponse.js";
+import { renderLeaderboardCard } from "../src/leaderboardCard.js";
+import { buildPlayerReply, fetchPlayerProfile } from "../src/player.js";
+import { getAttachmentBuffer, sendImage } from "../src/renderResponse.js";
 import {
   renderTerritoryMap,
   renderTerritoryNeighborhoodMap,
   type TerritoryMapSnapshot,
-} from "../../src/territoryMap.js";
-import type { TerritoryState } from "../../src/territories.js";
-import { requireMethod, sendJson, withApiLogging } from "../../src/http.js";
+} from "../src/territoryMap.js";
+import type { TerritoryState } from "../src/territories.js";
+import { requireMethod, sendJson, withApiLogging } from "../src/http.js";
 
 export const config = {
   maxDuration: 30,
