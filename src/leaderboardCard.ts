@@ -90,7 +90,7 @@ const configDirectory = dirname(fileURLToPath(configPath));
 const rawConfig = JSON.parse(
   readFileSync(configPath, "utf8"),
 ) as LeaderboardConfig;
-const backgroundPath = resolve(configDirectory, rawConfig.background.input);
+const backgroundPath = new URL("../public/img/player-background.jpeg", import.meta.url);
 const fontPath = resolvePreferredFontPath(resolve(configDirectory, rawConfig.font.path));
 const fontFamily = rawConfig.font.family ?? "Mojangles";
 const backgroundBuffer = readFileSync(backgroundPath);
