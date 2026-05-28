@@ -15,7 +15,18 @@ const API_ROUTES = [
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   await withApiLogging("health", req, res, async () => {
-    if (!requireMethod(req, res, "GET")) {
+    const method = req.method?.toUpperCase();
+
+    if (method !== "GET" && method !== "HEAD") {
+      res.setHeader("Allow", "GET, HEAD");
+      sendJson(res, 405, {
+        error: "Method Not Allowed",
+      });
+      return;
+    }
+
+    if (method === "HEAD") {
+      res.status(200).end();
       return;
     }
 
