@@ -107,6 +107,14 @@ const RESOURCE_ICON_ORDER: TerritoryResourceType[] = [
   "WOOD",
   "EMERALD"
 ];
+const MAP_FONT_FALLBACK_STACK = [
+  "\"DejaVu Sans\"",
+  "\"Liberation Sans\"",
+  "\"Noto Sans\"",
+  "\"Segoe UI\"",
+  "Arial",
+  "sans-serif"
+].join(", ");
 
 // Derived from the non-black bounds of public/img/map.png.
 const SOURCE_MAP_BOUNDS = {
@@ -359,7 +367,7 @@ async function loadBaseMapImage(): Promise<Image> {
 }
 
 function setCanvasFont(ctx: SKRSContext2D, fontSize: number): void {
-  ctx.font = `${fontSize}px "${MAP_FONT_FAMILY}", "Segoe UI", Arial, sans-serif`;
+  ctx.font = `${fontSize}px "${MAP_FONT_FAMILY}", ${MAP_FONT_FALLBACK_STACK}`;
 }
 
 function fitCanvasFontSize(

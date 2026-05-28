@@ -9,3 +9,4 @@ coverage/
 .vercel
 a
 .env*
+/playground

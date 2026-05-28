@@ -3,6 +3,14 @@ import { createCanvas, GlobalFonts, type SKRSContext2D } from "@napi-rs/canvas";
 const registeredFonts = new Set<string>();
 const scratchCanvas = createCanvas(1, 1);
 const scratchContext = scratchCanvas.getContext("2d");
+const CANVAS_FONT_FALLBACK_STACK = [
+  "\"DejaVu Sans\"",
+  "\"Liberation Sans\"",
+  "\"Noto Sans\"",
+  "\"Segoe UI\"",
+  "Arial",
+  "sans-serif",
+].join(", ");
 
 type CanvasTextLayout = {
   lines: string[];
@@ -45,7 +53,7 @@ function setCanvasFont(
   fontFamily: string,
   fontSize: number,
 ): void {
-  ctx.font = `${fontSize}px "${fontFamily}", "Segoe UI", Arial, sans-serif`;
+  ctx.font = `${fontSize}px "${fontFamily}", ${CANVAS_FONT_FALLBACK_STACK}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 }
