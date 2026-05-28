@@ -101,6 +101,7 @@ const bustRenderUrl = "https://identicraft.js.org/bust";
 const textColor = "#071018";
 const textWidthCache = new Map<string, number>();
 const avatarCache = new Map<string, Promise<Buffer | null>>();
+const letterSpacing = -1;
 
 const rowLayouts: LeaderboardRowLayout[] = [
   {
@@ -416,6 +417,7 @@ async function renderTextBuffer(
     fontSize: layer.fontSize,
     fill,
     opacity: layer.opacity,
+    letterSpacing,
   });
 }
 
@@ -479,6 +481,7 @@ async function measureTextWidth(
     fontPath,
     fontFamily,
     fontSize,
+    letterSpacing,
   );
   textWidthCache.set(cacheKey, width);
   return width;

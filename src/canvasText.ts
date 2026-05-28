@@ -31,6 +31,7 @@ type RenderCanvasTextArgs = {
   fontSize: number;
   fill: string;
   opacity?: number;
+  letterSpacing?: number;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -62,19 +63,29 @@ function buildCanvasTextLayout(
   text: string,
   fontFamily: string,
   fontSize: number,
+  letterSpacing = 0,
 ): CanvasTextLayout {
   const lines = text.split("\n");
   setCanvasFont(scratchContext, fontFamily, fontSize);
 
   const lineMetrics = lines.map((line) => {
-    const metrics = scratchContext.measureText(line || " ");
+    const displayLine = line || " ";
+    const metrics = scratchContext.measureText(displayLine);
+
+    const chars = [...displayLine];
+    const width =
+      chars.reduce(
+        (sum, char) => sum + scratchContext.measureText(char).width,
+        0,
+      ) + Math.max(0, chars.length - 1) * letterSpacing;
+
     const ascent = Math.ceil(metrics.actualBoundingBoxAscent || fontSize * 0.8);
     const descent = Math.ceil(metrics.actualBoundingBoxDescent || fontSize * 0.2);
 
     return {
       ascent,
       descent,
-      width: Math.max(0, Math.ceil(metrics.width)),
+      width: Math.max(0, Math.ceil(width)),
     };
   });
 
@@ -92,14 +103,41 @@ function buildCanvasTextLayout(
   };
 }
 
+function measureTextWithSpacing(
+  ctx: SKRSContext2D,
+  text: string,
+  letterSpacing = 0,
+): number {
+  if (!text) return 0;
+  return (
+    [...text].reduce((width, char) => width + ctx.measureText(char).width, 0) +
+    Math.max(0, [...text].length - 1) * letterSpacing
+  );
+}
+function fillTextWithSpacing(
+  ctx: SKRSContext2D,
+  text: string,
+  x: number,
+  y: number,
+  letterSpacing = 0,
+): void {
+  let cursor = x;
+
+  for (const char of [...text]) {
+    ctx.fillText(char, cursor, y);
+    cursor += ctx.measureText(char).width + letterSpacing;
+  }
+}
+
 export function measureCanvasTextWidth(
   text: string,
   fontPath: string,
   fontFamily: string,
   fontSize: number,
+  letterSpacing = 0,
 ): number {
   ensureCanvasFontRegistered(fontPath, fontFamily);
-  return buildCanvasTextLayout(text, fontFamily, fontSize).width;
+  return buildCanvasTextLayout(text, fontFamily, fontSize, letterSpacing).width;
 }
 
 export async function renderCanvasText(args: RenderCanvasTextArgs): Promise<{
@@ -110,7 +148,13 @@ export async function renderCanvasText(args: RenderCanvasTextArgs): Promise<{
   offsetY: number;
 }> {
   ensureCanvasFontRegistered(args.fontPath, args.fontFamily);
-  const layout = buildCanvasTextLayout(args.text, args.fontFamily, args.fontSize);
+  const letterSpacing = args.letterSpacing ?? 0;
+  const layout = buildCanvasTextLayout(
+    args.text,
+    args.fontFamily,
+    args.fontSize,
+    letterSpacing,
+  );
   const padding = Math.max(2, Math.ceil(args.fontSize * 0.12));
   const canvas = createCanvas(
     Math.max(1, layout.width + padding * 2),
@@ -125,7 +169,7 @@ export async function renderCanvasText(args: RenderCanvasTextArgs): Promise<{
   for (const [index, line] of layout.lines.entries()) {
     const metrics = layout.lineMetrics[index];
     const y = padding + index * layout.lineHeight + metrics.ascent;
-    ctx.fillText(line, padding, y);
+    fillTextWithSpacing(ctx, line, padding, y, letterSpacing);
   }
 
   return {

@@ -271,6 +271,7 @@ type PlayerCardTextLayer = {
   verticalAlign?: "top" | "middle" | "bottom";
   opacity?: number;
 };
+const letterSpacing = -1;
 
 export type PublicPlayerRaidProfile = {
   uuid: string;
@@ -762,7 +763,8 @@ async function renderTextBuffer(
     fontFamily: PLAYER_CARD_FONT_FAMILY,
     fontSize: layer.fontSize,
     fill: layer.fill,
-    opacity: layer.opacity
+    opacity: layer.opacity,
+    letterSpacing
   });
 }
 
@@ -778,7 +780,8 @@ async function measureTextWidth(text: string, fontSize: number): Promise<number>
     text,
     PLAYER_CARD_FONT_PATH,
     PLAYER_CARD_FONT_FAMILY,
-    fontSize
+    fontSize,
+    letterSpacing
   );
   textWidthCache.set(cacheKey, width);
   return width;
