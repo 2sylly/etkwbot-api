@@ -271,7 +271,7 @@ type PlayerCardTextLayer = {
   verticalAlign?: "top" | "middle" | "bottom";
   opacity?: number;
 };
-const letterSpacing = -1;
+const letterSpacing = -2;
 
 export type PublicPlayerRaidProfile = {
   uuid: string;
