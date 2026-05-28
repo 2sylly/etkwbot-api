@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { renderLeaderboardCard } from "../src/leaderboardCard.js";
+import { renderLootpoolImage } from "../src/lootpool.js";
 import { buildPlayerReply, fetchPlayerProfile } from "../src/player.js";
 import { getAttachmentBuffer, sendImage } from "../src/renderResponse.js";
 import {
@@ -31,6 +32,13 @@ type RenderRequestBody =
     } & Record<string, unknown>)
   | ({
       type: "territory-neighborhood-map";
+    } & Record<string, unknown>)
+  | ({
+      type: "lootpool";
+      view?: unknown;
+      campInternalName?: unknown;
+      requestedBy?: unknown;
+      timeZone?: unknown;
     } & Record<string, unknown>);
 
 function normalizeDate(value: unknown): Date | undefined {
@@ -154,6 +162,24 @@ export default async function handler(
         );
 
         sendImage(res, "image/jpeg", "territory-focus.jpg", getAttachmentBuffer(attachment));
+        return;
+      }
+      case "lootpool": {
+        const view = body.view === "global" ? "global" : "camp";
+        const attachment = await renderLootpoolImage({
+          view,
+          campInternalName:
+            typeof body.campInternalName === "string" ? body.campInternalName : null,
+          requestedBy:
+            typeof body.requestedBy === "string" && body.requestedBy.trim()
+              ? body.requestedBy.trim()
+              : "etkwynn-api",
+          timeZone: typeof body.timeZone === "string" && body.timeZone.trim()
+            ? body.timeZone.trim()
+            : null,
+        });
+
+        sendImage(res, "image/png", "lootpool.png", getAttachmentBuffer(attachment));
         return;
       }
       default:

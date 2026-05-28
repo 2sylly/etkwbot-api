@@ -32,6 +32,8 @@ type RenderCanvasTextArgs = {
   fill: string;
   opacity?: number;
   letterSpacing?: number;
+  stroke?: string;
+  strokeWidth?: number;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -129,6 +131,21 @@ function fillTextWithSpacing(
   }
 }
 
+function strokeTextWithSpacing(
+  ctx: SKRSContext2D,
+  text: string,
+  x: number,
+  y: number,
+  letterSpacing = 0,
+): void {
+  let cursor = x;
+
+  for (const char of [...text]) {
+    ctx.strokeText(char, cursor, y);
+    cursor += ctx.measureText(char).width + letterSpacing;
+  }
+}
+
 export function measureCanvasTextWidth(
   text: string,
   fontPath: string,
@@ -165,10 +182,19 @@ export async function renderCanvasText(args: RenderCanvasTextArgs): Promise<{
   setCanvasFont(ctx, args.fontFamily, args.fontSize);
   ctx.fillStyle = args.fill;
   ctx.globalAlpha = clamp(args.opacity ?? 1, 0, 1);
+  if (args.stroke && typeof args.strokeWidth === "number" && args.strokeWidth > 0) {
+    ctx.strokeStyle = args.stroke;
+    ctx.lineWidth = args.strokeWidth;
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
+  }
 
   for (const [index, line] of layout.lines.entries()) {
     const metrics = layout.lineMetrics[index];
     const y = padding + index * layout.lineHeight + metrics.ascent;
+    if (args.stroke && typeof args.strokeWidth === "number" && args.strokeWidth > 0) {
+      strokeTextWithSpacing(ctx, line, padding, y, letterSpacing);
+    }
     fillTextWithSpacing(ctx, line, padding, y, letterSpacing);
   }
 

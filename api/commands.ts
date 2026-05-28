@@ -8,6 +8,7 @@ import {
   renderTerritoryCommand,
 } from "../src/commandRenderers.js";
 import { requireMethod, sendJson, withApiLogging } from "../src/http.js";
+import { fetchLootpoolMetadata } from "../src/lootpool.js";
 
 export const config = {
   maxDuration: 60,
@@ -16,7 +17,8 @@ export const config = {
 type CommandRequestBody =
   | ({ type: "map" } & Record<string, unknown>)
   | ({ type: "territory"; territoryName?: unknown } & Record<string, unknown>)
-  | ({ type: "leaderboard-image" } & Record<string, unknown>);
+  | ({ type: "leaderboard-image" } & Record<string, unknown>)
+  | ({ type: "lootpool-metadata" } & Record<string, unknown>);
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   await withApiLogging("commands", req, res, async () => {
@@ -59,6 +61,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         sendJson(res, 200, {
           ok: true,
           ...(await renderLeaderboardImageCommand(args as LeaderboardImageCommandArgs)),
+        });
+        return;
+      }
+      case "lootpool-metadata": {
+        sendJson(res, 200, {
+          ok: true,
+          ...(await fetchLootpoolMetadata()),
         });
         return;
       }
