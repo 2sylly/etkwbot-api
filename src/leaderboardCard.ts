@@ -101,7 +101,7 @@ const bustRenderUrl = "https://identicraft.js.org/bust";
 const textColor = "#071018";
 const textWidthCache = new Map<string, number>();
 const avatarCache = new Map<string, Promise<Buffer | null>>();
-const letterSpacing = -2;
+const letterSpacing = -3;
 
 const rowLayouts: LeaderboardRowLayout[] = [
   {
