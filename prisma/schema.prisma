@@ -45,6 +45,12 @@ model GuildSettings {
   applicationChannelId String?
   applicationPanelMessageId String?
   ticketRoleId       String?
+  warApplicationChannelId String?
+  warApplicationPanelMessageId String?
+  warApplicationCreateRoleId String?
+  warApplicationRole1Id String?
+  warApplicationRole2Id String?
+  warApplicationRole3Id String?
   ticketCounter      Int      @default(0)
   logChannelId        String?
   roleChannelId       String?
@@ -91,6 +97,7 @@ model GuildTicket {
   ticketNumber   Int
   creatorUserId  String
   channelId      String?  @unique
+  ticketType     String   @default("application")
   status         String   @default("open")
   closedByUserId String?
   closedAt       DateTime?
