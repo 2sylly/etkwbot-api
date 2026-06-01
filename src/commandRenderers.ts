@@ -194,7 +194,8 @@ function resolveGuildColorMap(territories: TerritoryState[]): Map<string, string
 
 async function loadLiveTerritoryMapSnapshot(): Promise<TerritoryMapSnapshot> {
   const liveSnapshot = await fetchTerritoryStateSnapshot({
-    includeIncompleteGuilds: true
+    includeIncompleteGuilds: true,
+    source: "wynntils"
   });
 
   return {

@@ -68,6 +68,7 @@ model GuildSettings {
   captainRoleId       String?
   recruiterRoleId     String?
   recruitRoleId       String?
+  warrerRoleId        String?
   memberRoleId        String?
   inactiveRoleId      String?
   veteranRoleId       String?

@@ -4,6 +4,8 @@ import { fetchWithWynncraftAuthFallback } from "./wynncraft.js";
 
 const WYNNCRAFT_TERRITORY_LIST_URL =
   "https://api.wynncraft.com/v3/guild/list/territory";
+const WYNNTILS_TERRITORY_LIST_URL =
+  "https://athena.wynntils.com/cache/get/territoryList";
 const WYNNCRAFT_GUILD_PREFIX_URL = "https://api.wynncraft.com/v3/guild/prefix";
 
 const TERRITORY_RESOURCE_TYPES = [
@@ -121,6 +123,7 @@ export type FetchedTerritoryStateSnapshot = {
 
 type FetchTerritoryStateSnapshotOptions = {
   includeIncompleteGuilds?: boolean;
+  source?: "wynncraft" | "wynntils";
 };
 
 export type GuildTerritoryDetail = {
@@ -275,7 +278,13 @@ export function getBundledTerritoryTradingRoutes(territoryName: string): string[
   return routes ? [...routes] : null;
 }
 
-async function fetchTerritoryListResponse(): Promise<Response> {
+async function fetchTerritoryListResponse(
+  source: NonNullable<FetchTerritoryStateSnapshotOptions["source"]> = "wynncraft"
+): Promise<Response> {
+  if (source === "wynntils") {
+    return fetch(WYNNTILS_TERRITORY_LIST_URL);
+  }
+
   const response = await fetchWithWynncraftAuthFallback(WYNNCRAFT_TERRITORY_LIST_URL);
 
   if (response.status !== 401 && response.status !== 403) {
@@ -298,10 +307,11 @@ function parseTerritoryLastTickHeader(value: string | null): Date | null {
 export async function fetchTerritoryStateSnapshot(
   options: FetchTerritoryStateSnapshotOptions = {}
 ): Promise<FetchedTerritoryStateSnapshot> {
-  const response = await fetchTerritoryListResponse();
+  const response = await fetchTerritoryListResponse(options.source);
 
   if (!response.ok) {
-    throw new Error(`Wynncraft API returned ${response.status}`);
+    const sourceLabel = options.source === "wynntils" ? "Wynntils territory cache" : "Wynncraft API";
+    throw new Error(`${sourceLabel} returned ${response.status}`);
   }
 
   const territories = (await response.json()) as TerritoryListResponse;
