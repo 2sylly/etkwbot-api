@@ -1,4 +1,9 @@
-import { fetchTerritoryStateSnapshot, type TerritoryResourceType, type TerritoryState } from "./territories.js";
+import {
+  fetchTerritoryStateSnapshot,
+  fetchWynntilsTerritoryColorOverrides,
+  type TerritoryResourceType,
+  type TerritoryState
+} from "./territories.js";
 import {
   buildTerritoryMapSummary,
   getPregeneratedDefaultTerritoryMap,
@@ -15,6 +20,7 @@ import {
   type LeaderboardCardRow
 } from "./leaderboardCard.js";
 import { buildFilePayload, getAttachmentBuffer, type FilePayload } from "./renderResponse.js";
+import { logWarning } from "./core/logging.js";
 
 type LeaderboardMetric = "wars" | "total" | "notg" | "nol" | "tcc" | "tna" | "twp";
 
@@ -194,15 +200,26 @@ function resolveGuildColorMap(territories: TerritoryState[]): Map<string, string
 
 async function loadLiveTerritoryMapSnapshot(): Promise<TerritoryMapSnapshot> {
   const liveSnapshot = await fetchTerritoryStateSnapshot({
-    includeIncompleteGuilds: true,
-    source: "wynntils"
+    includeIncompleteGuilds: true
   });
+
+  let territories = liveSnapshot.territories;
+
+  try {
+    const colorOverrides = await fetchWynntilsTerritoryColorOverrides();
+    territories = liveSnapshot.territories.map((territory) => ({
+      ...territory,
+      guildColor: colorOverrides.get(territory.territoryName) ?? territory.guildColor
+    }));
+  } catch (error) {
+    logWarning("/map color override fetch from Wynntils failed; using default territory colors.");
+  }
 
   return {
     source: "live",
     takenAt: liveSnapshot.fetchedAt,
     territoryLastTick: liveSnapshot.territoryLastTick,
-    territories: liveSnapshot.territories
+    territories
   };
 }
 

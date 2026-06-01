@@ -123,7 +123,6 @@ export type FetchedTerritoryStateSnapshot = {
 
 type FetchTerritoryStateSnapshotOptions = {
   includeIncompleteGuilds?: boolean;
-  source?: "wynncraft" | "wynntils";
 };
 
 export type GuildTerritoryDetail = {
@@ -278,13 +277,7 @@ export function getBundledTerritoryTradingRoutes(territoryName: string): string[
   return routes ? [...routes] : null;
 }
 
-async function fetchTerritoryListResponse(
-  source: NonNullable<FetchTerritoryStateSnapshotOptions["source"]> = "wynncraft"
-): Promise<Response> {
-  if (source === "wynntils") {
-    return fetch(WYNNTILS_TERRITORY_LIST_URL);
-  }
-
+async function fetchTerritoryListResponse(): Promise<Response> {
   const response = await fetchWithWynncraftAuthFallback(WYNNCRAFT_TERRITORY_LIST_URL);
 
   if (response.status !== 401 && response.status !== 403) {
@@ -307,11 +300,10 @@ function parseTerritoryLastTickHeader(value: string | null): Date | null {
 export async function fetchTerritoryStateSnapshot(
   options: FetchTerritoryStateSnapshotOptions = {}
 ): Promise<FetchedTerritoryStateSnapshot> {
-  const response = await fetchTerritoryListResponse(options.source);
+  const response = await fetchTerritoryListResponse();
 
   if (!response.ok) {
-    const sourceLabel = options.source === "wynntils" ? "Wynntils territory cache" : "Wynncraft API";
-    throw new Error(`${sourceLabel} returned ${response.status}`);
+    throw new Error(`Wynncraft API returned ${response.status}`);
   }
 
   const territories = (await response.json()) as TerritoryListResponse;
@@ -381,6 +373,25 @@ export async function fetchTerritoryStateSnapshot(
 
 export async function fetchTerritoryStates(): Promise<TerritoryState[]> {
   return (await fetchTerritoryStateSnapshot()).territories;
+}
+
+export async function fetchWynntilsTerritoryColorOverrides(): Promise<Map<string, string>> {
+  const response = await fetch(WYNNTILS_TERRITORY_LIST_URL);
+
+  if (!response.ok) {
+    throw new Error(`Wynntils territory cache returned ${response.status}`);
+  }
+
+  const territories = (await response.json()) as TerritoryListResponse;
+
+  return new Map(
+    Object.entries(territories)
+      .map(([territoryName, entry]) => {
+        const color = typeof entry.guild?.color === "string" ? entry.guild.color.trim() : "";
+        return color.length > 0 ? ([territoryName, color] as const) : null;
+      })
+      .filter((entry): entry is readonly [string, string] => entry !== null)
+  );
 }
 
 export async function fetchGuildTerritoryDetail(
