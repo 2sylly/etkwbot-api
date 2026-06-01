@@ -44,6 +44,7 @@ model GuildSettings {
   inGuildLbMessageId  String?
   applicationChannelId String?
   applicationPanelMessageId String?
+  ticketTranscriptChannelId String?
   ticketRoleId       String?
   warApplicationChannelId String?
   warApplicationPanelMessageId String?
@@ -99,6 +100,7 @@ model GuildTicket {
   creatorUserId  String
   channelId      String?  @unique
   ticketType     String   @default("application")
+  applicationAnswersJson String?
   status         String   @default("open")
   closedByUserId String?
   closedAt       DateTime?
