@@ -59,10 +59,8 @@ type StoredRaidMember = StoredRaidValues & {
 export type GuildRaidSyncChange = {
   uuid: string;
   username: string;
-  previousUsername: string;
   deltas: {
     wars: number;
-    total: number;
     notg: number;
     nol: number;
     tcc: number;
@@ -71,14 +69,12 @@ export type GuildRaidSyncChange = {
   };
   current: {
     wars: number;
-    total: number;
     notg: number;
     nol: number;
     tcc: number;
     tna: number;
     twp: number;
   };
-  line: string;
 };
 
 export type GuildRaidSyncResult = {
@@ -231,14 +227,6 @@ function isEligibleForRaidCheck(
   );
 }
 
-function formatSignedDelta(value: number): string {
-  return value > 0 ? `+${value}` : `${value}`;
-}
-
-function formatDiscordName(value: string): string {
-  return `\`${value.replace(/`/g, "'")}\``;
-}
-
 async function runInBatches<T>(
   items: readonly T[],
   batchSize: number,
@@ -252,24 +240,12 @@ async function runInBatches<T>(
 function getRaidDeltas(snapshot: GuildRaidSnapshot, storedMember: StoredRaidValues) {
   return {
     wars: snapshot.wars - storedMember.wars,
-    total: snapshot.total - storedMember.totalRaids,
     notg: snapshot.notg - storedMember.notgRaids,
     nol: snapshot.nol - storedMember.nolRaids,
     tcc: snapshot.tcc - storedMember.tccRaids,
     tna: snapshot.tna - storedMember.tnaRaids,
     twp: snapshot.twp - storedMember.twpRaids,
   };
-}
-
-function buildChangeLine(snapshot: GuildRaidSnapshot, storedMember: StoredRaidValues): string {
-  const deltas = getRaidDeltas(snapshot, storedMember);
-  const changeText = RAID_DELTAS
-    .map((raid) => [raid.label, deltas[raid.key]] as const)
-    .filter(([, value]) => value !== 0)
-    .map(([label, value]) => `${formatSignedDelta(value)} ${label}`)
-    .join(" ");
-
-  return `${formatDiscordName(snapshot.username)}: ${changeText} (Total ${formatSignedDelta(deltas.total)})`;
 }
 
 function buildRaidChange(
@@ -279,18 +255,15 @@ function buildRaidChange(
   return {
     uuid: snapshot.uuid,
     username: snapshot.username,
-    previousUsername: storedMember.username,
     deltas: getRaidDeltas(snapshot, storedMember),
     current: {
       wars: snapshot.wars,
-      total: snapshot.total,
       notg: snapshot.notg,
       nol: snapshot.nol,
       tcc: snapshot.tcc,
       tna: snapshot.tna,
       twp: snapshot.twp,
     },
-    line: buildChangeLine(snapshot, storedMember),
   };
 }
 
