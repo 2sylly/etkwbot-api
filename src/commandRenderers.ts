@@ -151,6 +151,9 @@ function territoryHasResource(
   resourceType: TerritoryResourceType
 ): boolean {
   const resource = territory.resources.find((entry) => entry.type === resourceType);
+  if (resourceType === "EMERALD") {
+    return (resource?.baseGeneration ?? 0) >= 18000;
+  }
   return (resource?.generation ?? 0) > 0 || (resource?.baseGeneration ?? 0) > 0;
 }
 
