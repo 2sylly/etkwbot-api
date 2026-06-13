@@ -27,6 +27,15 @@ export function getWynncraftRequestsLastMinute(): number {
   return requestTimestamps.length;
 }
 
+export async function fetchWithWynncraftNoAuth(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
+  requestTimestamps.push(Date.now());
+  pruneRequestTimestamps();
+  return fetch(input, init);
+}
+
 export async function fetchWithWynncraftAuthFallback(
   input: string | URL | Request,
   init?: RequestInit,

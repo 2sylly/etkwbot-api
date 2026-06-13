@@ -1,4 +1,4 @@
-import { fetchWithWynncraftAuthFallback } from "./wynncraft.js";
+import { fetchWithWynncraftNoAuth } from "./wynncraft.js";
 
 const WYNNCRAFT_GUILD_URL = "https://beta-api.wynncraft.com/v3/guild/prefix/ETKW";
 
@@ -262,7 +262,7 @@ function buildIntraLeaderboardEntry(
 }
 
 async function fetchGuildResponse(): Promise<GuildResponse> {
-  const response = await fetchWithWynncraftAuthFallback(WYNNCRAFT_GUILD_URL);
+  const response = await fetchWithWynncraftNoAuth(WYNNCRAFT_GUILD_URL);
 
   if (!response.ok) {
     throw new Error(`Wynncraft API returned ${response.status}`);
