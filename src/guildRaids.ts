@@ -1,6 +1,6 @@
 import { fetchWithWynncraftNoAuth } from "./wynncraft.js";
 
-const WYNNCRAFT_GUILD_URL = "https://beta-api.wynncraft.com/v3/guild/prefix/ETKW";
+const WYNNCRAFT_GUILD_URL = "https://api.wynncraft.com/v3/guild/prefix/ETKW";
 
 export const PAGE_SIZE = 30;
 export const PAGINATION_TIMEOUT_MS = 5 * 60 * 1000;
