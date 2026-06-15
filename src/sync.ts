@@ -18,6 +18,7 @@ import { logInfo } from "./core/logging.js";
 
 const RAID_RECENTLY_ONLINE_GRACE_MS = 10 * 60 * 1000;
 const RAID_SYNC_INTERVAL_MS = 2 * 60 * 1000;
+const NEW_MEMBER_NORMAL_DELTA_MAX = 5;
 const TERRITORY_SNAPSHOT_RETENTION_MS = 30 * 60 * 1000;
 const TARGET_GUILD_NAME = "Empire of TKW";
 const TARGET_GUILD_PREFIX = "ETKW";
@@ -77,6 +78,25 @@ export type GuildRaidSyncChange = {
   };
 };
 
+export type GuildRaidSyncSnapshot = {
+  uuid: string;
+  username: string;
+  wars: number;
+  total: number;
+  notg: number;
+  nol: number;
+  tcc: number;
+  tna: number;
+  twp: number;
+};
+
+export type GuildRaidSyncAutoBackfill = {
+  kind: "new-member" | "zero-baseline";
+  maxDelta: number;
+  snapshotRowsWritten: number;
+  current: GuildRaidSyncSnapshot;
+};
+
 export type GuildRaidSyncResult = {
   ok: true;
   reason: string;
@@ -87,6 +107,7 @@ export type GuildRaidSyncResult = {
   updated: number;
   snapshotRowsInserted: number;
   tomeRowsInserted: number;
+  autoBackfills: GuildRaidSyncAutoBackfill[];
   leftGuildWarnings: Array<{ uuid: string; username: string }>;
   changes: GuildRaidSyncChange[];
 };
@@ -240,6 +261,7 @@ async function runInBatches<T>(
 function getRaidDeltas(snapshot: GuildRaidSnapshot, storedMember: StoredRaidValues) {
   return {
     wars: snapshot.wars - storedMember.wars,
+    total: snapshot.total - storedMember.totalRaids,
     notg: snapshot.notg - storedMember.notgRaids,
     nol: snapshot.nol - storedMember.nolRaids,
     tcc: snapshot.tcc - storedMember.tccRaids,
@@ -265,6 +287,280 @@ function buildRaidChange(
       twp: snapshot.twp,
     },
   };
+}
+
+function buildSyncSnapshot(snapshot: GuildRaidSnapshot): GuildRaidSyncSnapshot {
+  return {
+    uuid: snapshot.uuid,
+    username: snapshot.username,
+    wars: snapshot.wars,
+    total: snapshot.total,
+    notg: snapshot.notg,
+    nol: snapshot.nol,
+    tcc: snapshot.tcc,
+    tna: snapshot.tna,
+    twp: snapshot.twp,
+  };
+}
+
+function getMaxRaidDeltaValue(
+  snapshot: GuildRaidSnapshot,
+  storedMember: StoredRaidValues | null,
+): number {
+  if (!storedMember) {
+    return Math.max(
+      snapshot.total,
+      snapshot.notg,
+      snapshot.nol,
+      snapshot.tcc,
+      snapshot.tna,
+      snapshot.twp,
+    );
+  }
+
+  const deltas = getRaidDeltas(snapshot, storedMember);
+  return Math.max(
+    deltas.total,
+    deltas.notg,
+    deltas.nol,
+    deltas.tcc,
+    deltas.tna,
+    deltas.twp,
+  );
+}
+
+function hasZeroTrackedRaidBaseline(storedMember: StoredRaidValues): boolean {
+  return (
+    storedMember.totalRaids === 0 &&
+    storedMember.notgRaids === 0 &&
+    storedMember.nolRaids === 0 &&
+    storedMember.tccRaids === 0 &&
+    storedMember.tnaRaids === 0 &&
+    storedMember.twpRaids === 0
+  );
+}
+
+async function getBackfillHours(untilDate?: Date | null): Promise<Date[]> {
+  const currentSnapshotHour = getSnapshotHour();
+  const effectiveUntilDate =
+    untilDate && untilDate < currentSnapshotHour ? untilDate : currentSnapshotHour;
+  const priorHours = await prisma.guildRaidMemberHourlySnapshot.findMany({
+    where: {
+      snapshotHour: {
+        lt: effectiveUntilDate,
+      },
+    },
+    select: {
+      snapshotHour: true,
+    },
+    distinct: ["snapshotHour"],
+    orderBy: {
+      snapshotHour: "asc",
+    },
+  });
+
+  return priorHours.map((entry) => entry.snapshotHour);
+}
+
+async function getMissingBackfillHours(
+  memberUuid: string,
+  untilDate?: Date | null,
+): Promise<Date[]> {
+  const priorHours = await getBackfillHours(untilDate);
+
+  if (priorHours.length === 0) {
+    return [];
+  }
+
+  const existingSnapshots = await prisma.guildRaidMemberHourlySnapshot.findMany({
+    where: {
+      memberUuid,
+      snapshotHour: {
+        in: priorHours,
+      },
+    },
+    select: {
+      snapshotHour: true,
+    },
+  });
+  const existingHours = new Set(
+    existingSnapshots.map((entry) => entry.snapshotHour.toISOString()),
+  );
+
+  return priorHours.filter(
+    (snapshotHour) => !existingHours.has(snapshotHour.toISOString()),
+  );
+}
+
+async function backfillMemberHourlySnapshots(
+  snapshot: GuildRaidSnapshot,
+  untilDate?: Date | null,
+): Promise<number> {
+  const missingHours = await getMissingBackfillHours(snapshot.uuid, untilDate);
+
+  if (missingHours.length === 0) {
+    return 0;
+  }
+
+  await prisma.guildRaidMember.upsert({
+    where: {
+      uuid: snapshot.uuid,
+    },
+    update: {
+      username: snapshot.username,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+      notgRaids: snapshot.notg,
+      nolRaids: snapshot.nol,
+      tccRaids: snapshot.tcc,
+      tnaRaids: snapshot.tna,
+      twpRaids: snapshot.twp,
+      gambitsUsed: snapshot.gambitsUsed,
+      contributed: snapshot.contributed,
+      joinedAt: snapshot.joinedAt,
+    },
+    create: {
+      uuid: snapshot.uuid,
+      username: snapshot.username,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+      notgRaids: snapshot.notg,
+      nolRaids: snapshot.nol,
+      tccRaids: snapshot.tcc,
+      tnaRaids: snapshot.tna,
+      twpRaids: snapshot.twp,
+      gambitsUsed: snapshot.gambitsUsed,
+      contributed: snapshot.contributed,
+      joinedAt: snapshot.joinedAt,
+    },
+  });
+
+  const result = await prisma.guildRaidMemberHourlySnapshot.createMany({
+    data: missingHours.map((snapshotHour) => ({
+      snapshotHour,
+      memberUuid: snapshot.uuid,
+      username: snapshot.username,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+      notgRaids: snapshot.notg,
+      nolRaids: snapshot.nol,
+      tccRaids: snapshot.tcc,
+      tnaRaids: snapshot.tna,
+      twpRaids: snapshot.twp,
+      gambitsUsed: snapshot.gambitsUsed,
+      contributed: snapshot.contributed,
+      joinedAt: snapshot.joinedAt,
+    })),
+  });
+
+  return result.count;
+}
+
+async function replaceMemberHourlySnapshots(
+  snapshot: GuildRaidSnapshot,
+  untilDate?: Date | null,
+): Promise<number> {
+  const targetHours = await getBackfillHours(untilDate);
+
+  if (targetHours.length === 0) {
+    return 0;
+  }
+
+  await prisma.guildRaidMember.upsert({
+    where: {
+      uuid: snapshot.uuid,
+    },
+    update: {
+      username: snapshot.username,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+      notgRaids: snapshot.notg,
+      nolRaids: snapshot.nol,
+      tccRaids: snapshot.tcc,
+      tnaRaids: snapshot.tna,
+      twpRaids: snapshot.twp,
+      gambitsUsed: snapshot.gambitsUsed,
+      contributed: snapshot.contributed,
+      joinedAt: snapshot.joinedAt,
+    },
+    create: {
+      uuid: snapshot.uuid,
+      username: snapshot.username,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+      notgRaids: snapshot.notg,
+      nolRaids: snapshot.nol,
+      tccRaids: snapshot.tcc,
+      tnaRaids: snapshot.tna,
+      twpRaids: snapshot.twp,
+      gambitsUsed: snapshot.gambitsUsed,
+      contributed: snapshot.contributed,
+      joinedAt: snapshot.joinedAt,
+    },
+  });
+
+  await prisma.guildRaidMemberHourlySnapshot.deleteMany({
+    where: {
+      memberUuid: snapshot.uuid,
+      snapshotHour: {
+        in: targetHours,
+      },
+    },
+  });
+
+  const result = await prisma.guildRaidMemberHourlySnapshot.createMany({
+    data: targetHours.map((snapshotHour) => ({
+      snapshotHour,
+      memberUuid: snapshot.uuid,
+      username: snapshot.username,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+      notgRaids: snapshot.notg,
+      nolRaids: snapshot.nol,
+      tccRaids: snapshot.tcc,
+      tnaRaids: snapshot.tna,
+      twpRaids: snapshot.twp,
+      gambitsUsed: snapshot.gambitsUsed,
+      contributed: snapshot.contributed,
+      joinedAt: snapshot.joinedAt,
+    })),
+  });
+
+  return result.count;
+}
+
+async function replaceGuildTomeCheckBaseline(
+  snapshot: GuildTomeSnapshot,
+): Promise<boolean> {
+  const baselineRow = await prisma.guildTomeWeeklySnapshot.findFirst({
+    where: {
+      memberUuid: snapshot.uuid,
+    },
+    orderBy: {
+      snapshotAt: "desc",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!baselineRow) {
+    return false;
+  }
+
+  await prisma.guildTomeWeeklySnapshot.update({
+    where: {
+      id: baselineRow.id,
+    },
+    data: {
+      username: snapshot.username,
+      playtimeHours: snapshot.playtimeHours,
+      wars: snapshot.wars,
+      totalRaids: snapshot.total,
+    },
+  });
+
+  return true;
 }
 
 async function storeGuildTomeWeeklySnapshotsIfDue(
@@ -316,6 +612,24 @@ export async function syncGuildRaidsFromApiRequest(
 ): Promise<GuildRaidSyncResult> {
   const { roster, snapshots, tomeSnapshots } = await fetchGuildRaidTrackingData();
   const snapshotHour = getSnapshotHour();
+
+  if (roster.length === 0) {
+    return {
+      ok: true,
+      reason,
+      snapshotHour: snapshotHour.toISOString(),
+      rosterMembers: 0,
+      fetchedSnapshots: 0,
+      inserted: 0,
+      updated: 0,
+      snapshotRowsInserted: 0,
+      tomeRowsInserted: 0,
+      autoBackfills: [],
+      leftGuildWarnings: [],
+      changes: [],
+    };
+  }
+
   const raidCheckReferenceTimeMs = Date.now();
   const eligibleRaidCheckMemberUuids = roster
     .filter((member) => isEligibleForRaidCheck(member, raidCheckReferenceTimeMs))
@@ -358,6 +672,7 @@ export async function syncGuildRaidsFromApiRequest(
   const storedPresenceByUuid = new Map(storedMembers.map((member) => [member.uuid, member]));
   const storedByUuid = new Map(storedEligibleMembers.map((member) => [member.uuid, member]));
   const rosterUuids = new Set(roster.map((member) => member.uuid));
+  const tomeSnapshotsByUuid = new Map(tomeSnapshots.map((snapshot) => [snapshot.uuid, snapshot]));
   const normalizedSnapshots = snapshots.map((snapshot) => {
     const storedMember = storedByUuid.get(snapshot.uuid);
     return storedMember ? clampRaidSnapshotToStoredValues(snapshot, storedMember) : snapshot;
@@ -366,10 +681,65 @@ export async function syncGuildRaidsFromApiRequest(
   const missingMembers = normalizedSnapshots.filter(
     (snapshot) => !storedPresenceByUuid.has(snapshot.uuid),
   );
+  const autoBackfills: GuildRaidSyncAutoBackfill[] = [];
+  const autoBackfilledMemberUuids = new Set<string>();
+
+  for (const snapshot of missingMembers) {
+    const maxDelta = getMaxRaidDeltaValue(snapshot, null);
+
+    if (maxDelta <= NEW_MEMBER_NORMAL_DELTA_MAX) {
+      continue;
+    }
+
+    const snapshotRowsWritten = await backfillMemberHourlySnapshots(snapshot);
+
+    if (snapshotRowsWritten > 0) {
+      autoBackfilledMemberUuids.add(snapshot.uuid);
+    }
+
+    autoBackfills.push({
+      kind: "new-member",
+      maxDelta,
+      snapshotRowsWritten,
+      current: buildSyncSnapshot(snapshot),
+    });
+  }
+
   const membersToUpdate = normalizedSnapshots.filter((snapshot) => {
     const storedMember = storedByUuid.get(snapshot.uuid);
     return storedMember ? hasStoredMemberChanges(snapshot, storedMember) : false;
   });
+  for (const snapshot of membersToUpdate) {
+    const storedMember = storedByUuid.get(snapshot.uuid);
+
+    if (
+      !storedMember ||
+      !hasZeroTrackedRaidBaseline(storedMember)
+    ) {
+      continue;
+    }
+
+    const maxDelta = getMaxRaidDeltaValue(snapshot, storedMember);
+
+    if (maxDelta <= NEW_MEMBER_NORMAL_DELTA_MAX) {
+      continue;
+    }
+
+    const snapshotRowsWritten = await replaceMemberHourlySnapshots(snapshot);
+    const tomeSnapshot = tomeSnapshotsByUuid.get(snapshot.uuid) ?? null;
+
+    if (tomeSnapshot !== null) {
+      await replaceGuildTomeCheckBaseline(tomeSnapshot);
+    }
+
+    autoBackfills.push({
+      kind: "zero-baseline",
+      maxDelta,
+      snapshotRowsWritten,
+      current: buildSyncSnapshot(snapshot),
+    });
+  }
+
   const changes = membersToUpdate
     .map((snapshot) => {
       const storedMember = storedByUuid.get(snapshot.uuid);
@@ -404,9 +774,14 @@ export async function syncGuildRaidsFromApiRequest(
   const operations = [];
 
   if (missingMembers.length > 0) {
-    operations.push(
-      prisma.guildRaidMember.createMany({
-        data: missingMembers.map((snapshot) => ({
+    const missingMembersToCreate = missingMembers.filter(
+      (snapshot) => !autoBackfilledMemberUuids.has(snapshot.uuid),
+    );
+
+    if (missingMembersToCreate.length > 0) {
+      operations.push(
+        prisma.guildRaidMember.createMany({
+          data: missingMembersToCreate.map((snapshot) => ({
           uuid: snapshot.uuid,
           username: snapshot.username,
           wars: snapshot.wars,
@@ -419,9 +794,10 @@ export async function syncGuildRaidsFromApiRequest(
           gambitsUsed: snapshot.gambitsUsed,
           contributed: snapshot.contributed,
           joinedAt: snapshot.joinedAt,
-        })),
-      }),
-    );
+          })),
+        }),
+      );
+    }
   }
 
   operations.push(
@@ -485,6 +861,7 @@ export async function syncGuildRaidsFromApiRequest(
     updated: membersToUpdate.length,
     snapshotRowsInserted: snapshotsToInsert.length,
     tomeRowsInserted,
+    autoBackfills,
     leftGuildWarnings: storedMembers
       .filter((member) => !rosterUuids.has(member.uuid))
       .map((member) => ({

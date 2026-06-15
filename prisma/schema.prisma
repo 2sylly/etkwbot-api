@@ -147,6 +147,47 @@ model GuildMemberLink {
   @@index([guildId])
 }
 
+model GuildAlly {
+  id                  Int                 @id @default(autoincrement())
+  guildId             String
+  allyGuildUuid       String
+  allyGuildPrefix     String
+  allyGuildPrefixLower String
+  allyGuildName       String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  members             GuildRaidAllyMember[]
+
+  @@unique([guildId, allyGuildPrefixLower])
+  @@unique([guildId, allyGuildUuid])
+  @@index([guildId])
+}
+
+model GuildRaidAllyMember {
+  id             Int       @id @default(autoincrement())
+  allyId         Int
+  memberUuid     String
+  username       String
+  wars           Int       @default(0)
+  totalRaids     Int       @default(0)
+  notgRaids      Int       @default(0)
+  nolRaids       Int       @default(0)
+  tccRaids       Int       @default(0)
+  tnaRaids       Int       @default(0)
+  twpRaids       Int       @default(0)
+  gambitsUsed    Int       @default(0)
+  contributed    BigInt    @default(0)
+  joinedAt       DateTime?
+  lastSeenOnlineAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  ally           GuildAlly @relation(fields: [allyId], references: [id], onDelete: Cascade)
+
+  @@unique([allyId, memberUuid])
+  @@index([allyId])
+  @@index([memberUuid])
+}
+
 model GuildRaidMemberHourlySnapshot {
   id           Int      @id @default(autoincrement())
   snapshotHour DateTime
