@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "test": "tsx src/sync.test.ts",
     "playground": "node ./playground/render.mjs",
     "playground:watch": "node ./playground/render.mjs --watch",
     "postinstall": "prisma generate"

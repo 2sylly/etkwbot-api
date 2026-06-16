@@ -10,6 +10,11 @@ import {
   type GuildTomeSnapshot,
 } from "./guildRaids.js";
 import {
+  buildGuildRaidSyncChangesFromSnapshots,
+  type GuildRaidSyncChange,
+  type GuildRaidSyncStoredMember,
+} from "./syncRaidChanges.js";
+import {
   fetchTerritoryStateSnapshot,
   type FetchedTerritoryStateSnapshot,
   type TerritoryState,
@@ -49,34 +54,7 @@ type StoredRaidValues = {
   gambitsUsed: number;
 };
 
-type StoredRaidMember = StoredRaidValues & {
-  uuid: string;
-  username: string;
-  contributed: bigint;
-  joinedAt: Date | null;
-  lastSeenOnlineAt: Date | null;
-};
-
-export type GuildRaidSyncChange = {
-  uuid: string;
-  username: string;
-  deltas: {
-    wars: number;
-    notg: number;
-    nol: number;
-    tcc: number;
-    tna: number;
-    twp: number;
-  };
-  current: {
-    wars: number;
-    notg: number;
-    nol: number;
-    tcc: number;
-    tna: number;
-    twp: number;
-  };
-};
+type StoredRaidMember = GuildRaidSyncStoredMember;
 
 export type GuildRaidSyncSnapshot = {
   uuid: string;
@@ -267,25 +245,6 @@ function getRaidDeltas(snapshot: GuildRaidSnapshot, storedMember: StoredRaidValu
     tcc: snapshot.tcc - storedMember.tccRaids,
     tna: snapshot.tna - storedMember.tnaRaids,
     twp: snapshot.twp - storedMember.twpRaids,
-  };
-}
-
-function buildRaidChange(
-  snapshot: GuildRaidSnapshot,
-  storedMember: StoredRaidMember,
-): GuildRaidSyncChange {
-  return {
-    uuid: snapshot.uuid,
-    username: snapshot.username,
-    deltas: getRaidDeltas(snapshot, storedMember),
-    current: {
-      wars: snapshot.wars,
-      notg: snapshot.notg,
-      nol: snapshot.nol,
-      tcc: snapshot.tcc,
-      tna: snapshot.tna,
-      twp: snapshot.twp,
-    },
   };
 }
 
@@ -740,15 +699,10 @@ export async function syncGuildRaidsFromApiRequest(
     });
   }
 
-  const changes = membersToUpdate
-    .map((snapshot) => {
-      const storedMember = storedByUuid.get(snapshot.uuid);
-      return storedMember ? buildRaidChange(snapshot, storedMember) : null;
-    })
-    .filter((change): change is GuildRaidSyncChange => change !== null)
-    .filter((change) =>
-      Object.values(change.deltas).some((value) => value !== 0),
-    );
+  const changes = buildGuildRaidSyncChangesFromSnapshots(
+    membersToUpdate,
+    storedEligibleMembers,
+  );
 
   const existingSnapshotRows =
     normalizedSnapshots.length === 0
